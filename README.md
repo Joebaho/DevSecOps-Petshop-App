@@ -62,6 +62,11 @@ That means GitHub Actions receives temporary AWS credentials during the workflow
 ## Option 1: Run Automatically
 Use this option if you want to bootstrap the platform in one command.
 
+Before the first run, make the scripts executable:
+```bash
+chmod +x ./scripts/*.sh
+```
+
 Recommended command:
 ```bash
 ./scripts/deploy-infra-and-dev.sh
@@ -155,6 +160,12 @@ Same pattern for:
 - `petshop-prod-cluster`
 
 ### Step 4: Install ArgoCD
+If needed, make the scripts executable first:
+
+```bash
+chmod +x ./scripts/*.sh
+```
+
 Run:
 
 ```bash
@@ -211,6 +222,7 @@ After infrastructure is ready and `dev` is registered:
 To destroy everything in the correct order:
 
 ```bash
+chmod +x ./scripts/*.sh
 ./scripts/destroy-all.sh
 ```
 
