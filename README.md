@@ -1,4 +1,4 @@
-# DevSecOps 3-Tier Application
+# DevSecOps Petshop Application
 
 ## Stack
 - Terraform (AWS ECR, VPC, EKS)
