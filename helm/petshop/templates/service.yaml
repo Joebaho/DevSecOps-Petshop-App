@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: petshop
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: petshop
+  ports:
+    - port: 80
+      targetPort: {{ .Values.service.targetPort }}

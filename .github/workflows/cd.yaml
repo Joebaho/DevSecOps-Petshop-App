@@ -1,0 +1,59 @@
+name: Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment to promote
+        required: true
+        type: choice
+        options:
+          - dev
+          - stage
+          - prod
+      image_tag:
+        description: Existing container image tag to deploy
+        required: true
+        type: string
+      image_repository:
+        description: Optional full image repository override
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Update target environment values
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_REPOSITORY: ${{ inputs.image_repository }}
+        run: |
+          TARGET_FILE="helm/petshop/values-${TARGET_ENV}.yaml"
+          CURRENT_REPOSITORY="$(sed -n 's/^  repository: //p' "$TARGET_FILE")"
+          if [ -z "$IMAGE_REPOSITORY" ]; then
+            IMAGE_REPOSITORY="$CURRENT_REPOSITORY"
+          fi
+          if [ -z "$IMAGE_REPOSITORY" ]; then
+            IMAGE_REPOSITORY="$(sed -n 's/^  repository: //p' helm/petshop/values-dev.yaml)"
+          fi
+          sed -i "s|^  repository:.*|  repository: ${IMAGE_REPOSITORY}|" "$TARGET_FILE"
+          sed -i "s|^  tag:.*|  tag: ${IMAGE_TAG}|" "$TARGET_FILE"
+
+      - name: Commit promotion
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "helm/petshop/values-${{ inputs.environment }}.yaml"
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: promote ${{ inputs.image_tag }} to ${{ inputs.environment }}"
+          git push
+
