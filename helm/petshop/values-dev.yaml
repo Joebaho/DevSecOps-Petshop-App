@@ -3,4 +3,4 @@ image:
   repository: 546310954125.dkr.ecr.us-west-2.amazonaws.com/petshop-app
   tag: 867f197c21ca54fc0b0f84e7c7af1b77759de98f
 service:
-  type: ClusterIP
+  type: LoadBalancer
