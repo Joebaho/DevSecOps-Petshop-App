@@ -59,6 +59,10 @@ The CI workflow assumes that role using:
 
 That means GitHub Actions receives temporary AWS credentials during the workflow run.
 
+## EKS Version Note
+The Terraform EKS module is configured to use Kubernetes `1.33` with Amazon Linux 2023 managed node group AMIs.
+This avoids the node group creation error you can hit with older Kubernetes and AL2-based defaults.
+
 ## Option 1: Run Automatically
 Use this option if you want to bootstrap the platform in one command.
 

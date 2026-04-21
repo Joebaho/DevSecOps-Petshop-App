@@ -3,7 +3,7 @@ module "eks" {
   version = "~> 20.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.29"
+  cluster_version = var.cluster_version
 
   vpc_id     = var.vpc_id
   subnet_ids = var.private_subnets
@@ -17,6 +17,7 @@ module "eks" {
       min_size     = 1
 
       instance_types = ["t3.medium"]
+      ami_type       = "AL2023_x86_64_STANDARD"
     }
   }
 
