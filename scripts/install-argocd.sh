@@ -7,7 +7,8 @@ PRINT_PASSWORD="${INSTALL_ARGOCD_PRINT_PASSWORD:-true}"
 
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl apply --server-side=true --force-conflicts -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
 echo "Waiting for ArgoCD..."
 kubectl wait --for=condition=available deployment/argocd-server -n argocd --timeout=300s

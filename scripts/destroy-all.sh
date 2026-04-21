@@ -17,6 +17,8 @@ delete_argocd_app() {
 
 destroy_stack() {
   local stack_dir="$1"
+  echo "Initializing Terraform stack: ${stack_dir}"
+  terraform -chdir="${stack_dir}" init
   echo "Destroying Terraform stack: ${stack_dir}"
   terraform -chdir="${stack_dir}" destroy -auto-approve
 }
