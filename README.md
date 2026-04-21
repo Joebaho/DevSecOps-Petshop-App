@@ -1,85 +1,268 @@
 # DevSecOps Petshop Application
 
-## Stack
-- Terraform (AWS ECR, VPC, EKS)
-- Docker
-- Kubernetes
-- Helm
-- ArgoCD (GitOps)
-- GitHub Actions (CI/CD)
-- Trivy (Security)
-- SonarQube (Code Quality)
-
-## Flow
-1. Developer pushes code
-2. CI builds, scans, and pushes the container image to ECR
-3. CI updates `helm/petshop/values-dev.yaml` with the new image tag
-4. ArgoCD detects the Git change
-5. ArgoCD deploys to the target Kubernetes namespace
-6. Manual promotion workflow updates `stage` or `prod` values files
-
-## Layout
-- `app/`: Java application and Docker build
-- `.github/workflows/`: CI build and promotion workflows
-- `helm/petshop/`: Helm chart plus environment-specific values
-- `gitops/`: ArgoCD applications for `dev`, `stage`, and `prod`
-- `infra/`: Terraform for ECR plus per-environment VPC and EKS stacks
-
-## Prerequisites
-- A GitHub repository for this project
-- AWS account access
-- GitHub Actions variables:
-  - `AWS_REGION`
-  - `ECR_REPOSITORY`
-
-## Region
-- Default AWS region is `us-west-2`
-- The Terraform environment stacks use `us-west-2a` and `us-west-2b`
+This repository shows a DevSecOps deployment flow for a Java application using Terraform, ECR, EKS, Helm, ArgoCD, and GitHub Actions.
 
 ## Repository
-- GitHub repository: `https://github.com/Joebaho/DevSecOps-Petshop-App.git`
+- GitHub: `https://github.com/Joebaho/DevSecOps-Petshop-App.git`
+- AWS region: `us-west-2`
 
-## Before First Deployment
-1. Run the automated deployment bootstrap:
-   - `./scripts/deploy-infra-and-dev.sh`
-2. Copy the `github_actions_role_arn` Terraform output shown by the script into the GitHub Actions secret `AWS_ROLE_ARN`
-3. Confirm the GitHub repository variables exist:
-   - `AWS_REGION=us-west-2`
-   - `ECR_REPOSITORY=petshop-app`
-4. Push to `main` so CI builds the first image and updates `helm/petshop/values-dev.yaml`
-5. Promote the image to `stage` and `prod` when you are ready
+## What This Project Does
+1. Terraform provisions AWS infrastructure.
+2. GitHub Actions builds the Java app and Docker image.
+3. GitHub Actions scans the image with Trivy.
+4. GitHub Actions pushes the image to Amazon ECR.
+5. GitHub Actions updates the Helm values for `dev`.
+6. ArgoCD detects the Git change and deploys the application to EKS.
+7. The same image can later be promoted to `stage` and `prod`.
 
-## Promotion
-- Push to `main` to build, scan, push, and deploy to `dev`
-- Run the `Promote` GitHub Actions workflow to move an existing image tag to `stage` or `prod`
+## Project Layout
+- `app/`: Java application and Dockerfile
+- `.github/workflows/`: CI and promotion workflows
+- `helm/petshop/`: Helm chart and environment values
+- `gitops/`: ArgoCD applications for `dev`, `stage`, and `prod`
+- `infra/`: shared Terraform plus per-environment Terraform
+- `scripts/`: helper scripts for deployment, ArgoCD install, and teardown
 
-## Deploy Infrastructure And Dev
-- Recommended command:
-  - `./scripts/deploy-infra-and-dev.sh`
-- Backward-compatible alias:
-  - `./scripts/deploy-all.sh`
-- The script:
-  - creates the shared root infrastructure in `infra/`
-  - creates all three EKS environments
-  - installs ArgoCD in each cluster
-  - applies the `dev` ArgoCD application by default
-  - prints the GitHub Actions IAM role ARN you need for the `AWS_ROLE_ARN` secret
-- By default it does not register `stage` and `prod` apps immediately, because those environments depend on a promoted image tag.
-- If you want it to register all three apps right away, run:
-  - `DEPLOY_STAGE_AND_PROD_APPS=true ./scripts/deploy-infra-and-dev.sh`
+## Environments
+This project has three deployment environments:
+- `dev`
+- `stage`
+- `prod`
+
+Each environment has its own Terraform stack under:
+- `infra/envs/dev`
+- `infra/envs/stage`
+- `infra/envs/prod`
+
+## Prerequisites
+Before running anything, make sure you have:
+- AWS credentials configured locally
+- `terraform` installed
+- `kubectl` installed
+- `aws` CLI installed
+- access to the GitHub repository
+
+GitHub repository settings also need:
+- secret: `AWS_ROLE_ARN`
+- variable: `AWS_REGION=us-west-2`
+- variable: `ECR_REPOSITORY=petshop-app`
 
 ## GitHub Actions AWS Access
-- Terraform creates an AWS OIDC provider for GitHub Actions and an IAM role scoped to `Joebaho/DevSecOps-Petshop-App` on the `main` branch.
-- The CI workflow in `.github/workflows/ci.yaml` assumes that role using the `AWS_ROLE_ARN` GitHub secret.
-- For the current pipeline, that role only needs ECR permissions because GitHub Actions pushes the image and commits the Helm values update back to GitHub.
-- ArgoCD handles the Kubernetes deployment after the Git change, so GitHub Actions does not currently need direct EKS permissions.
+This project uses GitHub OIDC with an IAM role instead of long-lived AWS access keys.
 
-## Destroy Everything
-- To tear down the full project in the correct order, run:
-  - `./scripts/destroy-all.sh`
-- The script:
-  - deletes the ArgoCD applications
-  - destroys `prod`, then `stage`, then `dev`
-  - destroys the shared root infrastructure in `infra/`
-- Make sure your AWS credentials and `kubectl` context are still valid before running it.
-- If ECR contains images, Terraform may require the repository to be emptied before deletion completes.
+Terraform creates:
+- the GitHub OIDC provider
+- the GitHub Actions IAM role
+
+The CI workflow assumes that role using:
+- `AWS_ROLE_ARN`
+
+That means GitHub Actions receives temporary AWS credentials during the workflow run.
+
+## Option 1: Run Automatically
+Use this option if you want to bootstrap the platform in one command.
+
+Recommended command:
+```bash
+./scripts/deploy-infra-and-dev.sh
+```
+
+Backward-compatible alias:
+```bash
+./scripts/deploy-all.sh
+```
+
+What this does:
+1. Creates shared infrastructure in `infra/`
+2. Creates the `dev`, `stage`, and `prod` EKS environments
+3. Installs ArgoCD in each cluster
+4. Registers the `dev` application by default
+5. Prints the Terraform output for `github_actions_role_arn`
+
+What you still need to do after the script finishes:
+1. Copy the printed `github_actions_role_arn`
+2. Add it to the GitHub secret `AWS_ROLE_ARN`
+3. Confirm GitHub variables:
+   - `AWS_REGION=us-west-2`
+   - `ECR_REPOSITORY=petshop-app`
+4. Push to `main`
+
+By default, the script does not register `stage` and `prod` applications right away.
+That is intentional, because the normal release flow is:
+- deploy first to `dev`
+- test
+- promote the same image to `stage`
+- promote the same image to `prod`
+
+If you want to register all three applications immediately, run:
+```bash
+DEPLOY_STAGE_AND_PROD_APPS=true ./scripts/deploy-infra-and-dev.sh
+```
+
+## Option 2: Run Environment By Environment
+Use this option if you want more control and want to explain each step separately.
+
+### Step 1: Create Shared Infrastructure
+This creates the ECR repository and the GitHub Actions IAM/OIDC resources.
+
+```bash
+terraform -chdir=infra init
+terraform -chdir=infra apply
+```
+
+Then capture the outputs:
+```bash
+terraform -chdir=infra output
+```
+
+Copy:
+- `github_actions_role_arn` into GitHub secret `AWS_ROLE_ARN`
+
+Confirm GitHub variables:
+- `AWS_REGION=us-west-2`
+- `ECR_REPOSITORY=petshop-app`
+
+### Step 2: Create One Environment
+Example for `dev`:
+
+```bash
+terraform -chdir=infra/envs/dev init
+terraform -chdir=infra/envs/dev apply
+```
+
+Do the same for `stage`:
+```bash
+terraform -chdir=infra/envs/stage init
+terraform -chdir=infra/envs/stage apply
+```
+
+Do the same for `prod`:
+```bash
+terraform -chdir=infra/envs/prod init
+terraform -chdir=infra/envs/prod apply
+```
+
+### Step 3: Connect To The Cluster
+Example for `dev`:
+
+```bash
+aws eks update-kubeconfig --region us-west-2 --name petshop-dev-cluster --alias petshop-dev-cluster
+kubectl config use-context petshop-dev-cluster
+```
+
+Same pattern for:
+- `petshop-stage-cluster`
+- `petshop-prod-cluster`
+
+### Step 4: Install ArgoCD
+Run:
+
+```bash
+./scripts/install-argocd.sh
+```
+
+This installs ArgoCD into the cluster currently selected in `kubectl`.
+
+### Step 5: Register The Application In ArgoCD
+For `dev`:
+
+```bash
+kubectl apply -f gitops/petshop-dev/app.yaml
+```
+
+For `stage`:
+
+```bash
+kubectl apply -f gitops/petshop-stage/app.yaml
+```
+
+For `prod`:
+
+```bash
+kubectl apply -f gitops/petshop-prod/app.yaml
+```
+
+## How Application Deployment Works
+Infrastructure creation and application rollout are not exactly the same thing.
+
+Infrastructure:
+- can be created all at once
+- can also be created one environment at a time
+
+Application rollout:
+- `dev` is the first deployment target
+- `stage` and `prod` should normally receive promoted image tags later
+
+So when someone asks if this project can be deployed in one command, the best answer is:
+- the infrastructure bootstrap can be done in one command
+- the application release flow still follows `dev` first, then `stage`, then `prod`
+
+## Promotion Flow
+After infrastructure is ready and `dev` is registered:
+
+1. Push code to `main`
+2. GitHub Actions runs the CI workflow
+3. The workflow builds, scans, and pushes the image to ECR
+4. The workflow updates `helm/petshop/values-dev.yaml`
+5. ArgoCD deploys to `dev`
+6. Use the `Promote` GitHub Actions workflow to update `stage` or `prod`
+
+## Destroy Everything Automatically
+To destroy everything in the correct order:
+
+```bash
+./scripts/destroy-all.sh
+```
+
+This script:
+1. Deletes the ArgoCD applications
+2. Destroys `prod`
+3. Destroys `stage`
+4. Destroys `dev`
+5. Destroys shared infrastructure in `infra/`
+
+## Destroy Environment By Environment
+You can also destroy manually:
+
+```bash
+terraform -chdir=infra/envs/prod destroy
+terraform -chdir=infra/envs/stage destroy
+terraform -chdir=infra/envs/dev destroy
+terraform -chdir=infra destroy
+```
+
+## Notes
+- If ECR still contains images, Terraform may not delete the repository until it is empty.
+- Your AWS credentials and `kubectl` context must still be valid during deploy or destroy.
+- The CI workflow deploys through GitOps. GitHub Actions pushes the image and updates Git, while ArgoCD handles Kubernetes deployment.
+
+## 🤝 Contribution
+
+Pull requests are welcome. For major changes, please open an issue first.
+
+## 👨‍💻 Author
+
+**Joseph Mbatchou**
+
+• DevOps / Cloud / Platform  Engineer   
+• Content Creator / AWS Builder
+
+## 🔗 Connect With Me
+
+🌐 Website: [https://platform.joebahocloud.com](https://platform.joebahocloud.com)
+
+💼 LinkedIn: [https://www.linkedin.com/in/josephmbatchou/](https://www.linkedin.com/in/josephmbatchou/)
+
+🐦 X/Twitter: [https://www.twitter.com/Joebaho237](https://www.twitter.com/Joebaho237)
+
+▶️ YouTube: [https://www.youtube.com/@josephmbatchou5596](https://www.youtube.com/@josephmbatchou5596)
+
+🔗 Github: [https://github.com/Joebaho](https://github.com/Joebaho)
+
+📦 Dockerhub: [https://hub.docker.com/u/joebaho2](https://hub.docker.com/u/joebaho2)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License — see the LICENSE file for details.
