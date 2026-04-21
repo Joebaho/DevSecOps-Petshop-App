@@ -20,3 +20,15 @@ module "ecr" {
     Project = "petshop"
   }
 }
+
+module "github_actions_oidc" {
+  source             = "./modules/github_actions_oidc"
+  github_owner       = var.github_owner
+  github_repo        = var.github_repo
+  github_branch      = var.github_branch
+  role_name          = var.github_actions_role_name
+  ecr_repository_arn = module.ecr.repository_arn
+  tags = {
+    Project = "petshop"
+  }
+}
