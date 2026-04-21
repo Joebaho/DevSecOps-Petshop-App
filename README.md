@@ -251,6 +251,8 @@ terraform -chdir=infra destroy
 - If ECR still contains images, Terraform may not delete the repository until it is empty.
 - Your AWS credentials and `kubectl` context must still be valid during deploy or destroy.
 - The CI workflow deploys through GitOps. GitHub Actions pushes the image and updates Git, while ArgoCD handles Kubernetes deployment.
+- The Java app currently overrides Jetty dependencies to `9.4.58.v20250814` to reduce known issues from SparkJava's older transitive dependencies.
+- `.trivyignore` temporarily suppresses `CVE-2026-2332` because the advisory references Jetty `9.4.60` as the fix, and that version is not yet available on Maven Central for this dependency line.
 
 ## 🤝 Contribution
 
