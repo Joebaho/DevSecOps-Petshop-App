@@ -124,6 +124,8 @@ Then capture the outputs:
 terraform -chdir=infra output
 ```
 
+![Picture 1](./images/pic1.png)
+
 Copy:
 - `github_actions_role_arn` into GitHub secret `AWS_ROLE_ARN`
 
@@ -138,6 +140,8 @@ Example for `dev`:
 terraform -chdir=infra/envs/dev init
 terraform -chdir=infra/envs/dev apply
 ```
+
+![Picture 2](./images/pic2.png)
 
 Do the same for `stage`:
 ```bash
@@ -238,6 +242,8 @@ If local port `8080` is already in use, expose the ArgoCD UI on another local po
 kubectl port-forward svc/argocd-server -n argocd 9091:443
 ```
 
+![Argocd access](./images/pic3.png)
+
 Then open:
 - `https://localhost:9091`
 
@@ -252,6 +258,8 @@ Then open:
 Note:
 - your browser may warn about the self-signed certificate
 - accept the warning and continue
+
+![Argocd page](./images/pic4.png)
 
 ## How To Access The Application Publicly
 When the deployment is complete, the app is public only if the Kubernetes service is exposed as `LoadBalancer`.
@@ -338,6 +346,10 @@ If the external value is still pending, wait a few minutes and check again:
 ```bash
 kubectl get svc -n dev
 ```
+
+![webpage1](./images/pic5.png)
+
+![webpage2](./images/pi6.png)
 
 ### Verification Commands
 If you want to confirm everything is healthy before opening the browser:
