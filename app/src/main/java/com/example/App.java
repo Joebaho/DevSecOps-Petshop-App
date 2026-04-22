@@ -605,3 +605,4 @@ public class App {
             .replace("__CONTENT__", content);
     }
 }
+
