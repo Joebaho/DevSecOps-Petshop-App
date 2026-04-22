@@ -1,6 +1,6 @@
 replicaCount: 1
 image:
   repository: 546310954125.dkr.ecr.us-west-2.amazonaws.com/petshop-app
-  tag: 867f197c21ca54fc0b0f84e7c7af1b77759de98f
+  tag: 9dc03c25ee3e1aabb21f17ce4ef9e5bbab27cbe5
 service:
   type: LoadBalancer
