@@ -222,6 +222,136 @@ After infrastructure is ready and `dev` is registered:
 5. ArgoCD deploys to `dev`
 6. Use the `Promote` GitHub Actions workflow to update `stage` or `prod`
 
+## ArgoCD Access
+After ArgoCD is installed, the default login is:
+- username: `admin`
+- password: read it from the initial admin secret
+
+Get the password with:
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d && echo
+```
+
+If local port `8080` is already in use, expose the ArgoCD UI on another local port:
+```bash
+kubectl port-forward svc/argocd-server -n argocd 9091:443
+```
+
+Then open:
+- `https://localhost:9091`
+
+If you want the default port instead, use:
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+
+Then open:
+- `https://localhost:8080`
+
+Note:
+- your browser may warn about the self-signed certificate
+- accept the warning and continue
+
+## How To Access The Application Publicly
+When the deployment is complete, the app is public only if the Kubernetes service is exposed as `LoadBalancer`.
+
+For `dev`, this is already set in:
+- `helm/petshop/values-dev.yaml`
+
+After pushing the change to GitHub and letting ArgoCD sync, get the public endpoint with:
+```bash
+kubectl get svc -n dev
+```
+
+Look for the `petshop` service and read the value in:
+- `EXTERNAL-IP`
+
+You can also query just the external hostname with:
+```bash
+kubectl get svc petshop -n dev -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" && echo
+```
+
+If AWS returns an IP instead of a hostname, use:
+```bash
+kubectl get svc petshop -n dev -o jsonpath="{.status.loadBalancer.ingress[0].ip}" && echo
+```
+
+Once the load balancer is ready, open:
+- `http://<external-hostname>`
+
+If the value is still pending, wait a few minutes and run the command again.
+
+## How To View The Application In The Browser
+After:
+- the infrastructure is created
+- ArgoCD is installed
+- the `petshop-dev` application is registered
+- GitHub Actions has completed successfully
+
+Use one of these two methods.
+
+### Option 1: Quick Local Browser Test
+This is the fastest way to confirm the app is working.
+
+Run:
+```bash
+kubectl port-forward -n dev svc/petshop 9090:80
+```
+
+Then open:
+- `http://localhost:9090`
+
+If port `9090` is already in use, try another local port:
+```bash
+kubectl port-forward -n dev svc/petshop 7070:80
+```
+
+Then open:
+- `http://localhost:7070`
+
+### Option 2: Public Browser Access
+The `dev` environment is configured to use:
+- `service.type=LoadBalancer`
+
+Check the service:
+```bash
+kubectl get svc -n dev
+```
+
+You should see the `petshop` service with an external hostname or IP in the `EXTERNAL-IP` column.
+
+You can also query it directly:
+```bash
+kubectl get svc petshop -n dev -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" && echo
+```
+
+If AWS returns an IP instead of a hostname:
+```bash
+kubectl get svc petshop -n dev -o jsonpath="{.status.loadBalancer.ingress[0].ip}" && echo
+```
+
+Then open in your browser:
+- `http://<external-hostname>`
+
+If the external value is still pending, wait a few minutes and check again:
+```bash
+kubectl get svc -n dev
+```
+
+### Verification Commands
+If you want to confirm everything is healthy before opening the browser:
+```bash
+kubectl get pods -n dev
+kubectl get svc -n dev
+kubectl get applications -n argocd
+```
+
+Expected result:
+- the `petshop` pod should be `Running`
+- the `petshop-dev` ArgoCD application should be `Synced` and `Healthy`
+- the service should show either a local cluster IP or an external load balancer endpoint
+
 ## Destroy Everything Automatically
 To destroy everything in the correct order:
 
