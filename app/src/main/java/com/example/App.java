@@ -233,7 +233,7 @@ public class App {
             <head>
               <meta charset="UTF-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>%s</title>
+              <title>__TITLE__</title>
               <style>
                 :root {
                   --bg: #f8f1e7;
@@ -591,7 +591,7 @@ public class App {
                 </div>
 
                 <div class="content-panel">
-                  %s
+                  __CONTENT__
                 </div>
 
                 <footer>
@@ -600,6 +600,8 @@ public class App {
               </main>
             </body>
             </html>
-            """.formatted(title, content);
+            """
+            .replace("__TITLE__", title)
+            .replace("__CONTENT__", content);
     }
 }
