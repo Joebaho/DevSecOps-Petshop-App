@@ -349,7 +349,7 @@ kubectl get svc -n dev
 
 ![webpage1](./images/pic5.png)
 
-![webpage2](./images/pi6.png)
+![webpage2](./images/pic6.png)
 
 ### Verification Commands
 If you want to confirm everything is healthy before opening the browser:
